@@ -5870,6 +5870,19 @@ a.status-card {
           justify-content: space-between;
         }
 
+        &__label {
+          flex: 1 1 auto;
+          min-width: 0;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: inherit;
+          font: inherit;
+          text-align: start;
+          overflow: inherit;
+          text-overflow: inherit;
+        }
+
         .icon-button {
           transition: none;
         }

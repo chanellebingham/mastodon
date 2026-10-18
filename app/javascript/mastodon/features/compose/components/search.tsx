@@ -48,6 +48,10 @@ const messages = defineMessages({
     defaultMessage: 'Search…',
   },
   clearSearch: { id: 'search.clear', defaultMessage: 'Clear search' },
+  removeRecentSearch: {
+    id: 'search.remove_recent_search',
+    defaultMessage: 'Remove {search} from recent searches',
+  },
   placeholderSignedIn: {
     id: 'search.search_or_paste',
     defaultMessage: 'Search or paste URL',
@@ -100,6 +104,7 @@ interface SearchOption {
   label: React.ReactNode;
   action: (e: React.MouseEvent | React.KeyboardEvent) => void;
   forget?: (e: React.MouseEvent | React.KeyboardEvent) => void;
+  forgetLabel?: string;
 }
 
 export const Search: React.FC<{
@@ -307,8 +312,11 @@ export const Search: React.FC<{
           e.stopPropagation();
           void dispatch(forgetSearchResult(search));
         },
+        forgetLabel: intl.formatMessage(messages.removeRecentSearch, {
+          search: labelForRecentSearch(search),
+        }),
       })),
-    [dispatch, history, recent, unfocus],
+    [dispatch, history, intl, recent, unfocus],
   );
 
   const navigableOptions: SearchOption[] = useMemo(
@@ -548,6 +556,21 @@ export const Search: React.FC<{
     };
   }, []);
 
+  const getForgetKeyDownHandler = useCallback(
+    (forget: SearchOption['forget']) => {
+      return (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          // Keep the popout's key handling from treating this as
+          // activating the recent search the button belongs to
+          e.preventDefault();
+          e.stopPropagation();
+          forget?.(e);
+        }
+      };
+    },
+    [],
+  );
+
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -628,28 +651,36 @@ export const Search: React.FC<{
 
             <div className='search__popout__menu'>
               {recentOptions.length > 0 ? (
-                recentOptions.map(({ label, key, action, forget }, i) => (
-                  <div
-                    key={key}
-                    tabIndex={0}
-                    role='button'
-                    onMouseDown={action}
-                    onFocus={getOptionFocusHandler(i)}
-                    className={classNames(
-                      'search__popout__menu__item search__popout__menu__item--flex',
-                      { selected: selectedOption === i },
-                    )}
-                  >
-                    <span>{label}</span>
-                    <button
-                      className='icon-button'
-                      onMouseDown={forget}
-                      type='button'
+                recentOptions.map(
+                  ({ label, key, action, forget, forgetLabel }, i) => (
+                    <div
+                      key={key}
+                      className={classNames(
+                        'search__popout__menu__item search__popout__menu__item--flex',
+                        { selected: selectedOption === i },
+                      )}
                     >
-                      <Icon id='times' icon={XIcon} />
-                    </button>
-                  </div>
-                ))
+                      <button
+                        type='button'
+                        onMouseDown={action}
+                        onFocus={getOptionFocusHandler(i)}
+                        className='search__popout__menu__item__label'
+                      >
+                        {label}
+                      </button>
+                      <button
+                        type='button'
+                        className='icon-button'
+                        aria-label={forgetLabel}
+                        onMouseDown={forget}
+                        onKeyDown={getForgetKeyDownHandler(forget)}
+                        onFocus={getOptionFocusHandler(i)}
+                      >
+                        <Icon id='times' icon={XIcon} />
+                      </button>
+                    </div>
+                  ),
+                )
               ) : (
                 <div className='search__popout__menu__message'>
                   <FormattedMessage
